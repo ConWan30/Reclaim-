@@ -7,7 +7,7 @@ async function rest(table,query=''){return request(`/rest/v1/${table}${query}`,{
 window.ReclaimAPI=Object.freeze({
  session,
  async signIn(email,password){const data=await request('/auth/v1/token?grant_type=password',{method:'POST',body:JSON.stringify({email,password})});saveSession(data);return data},
- async signUp(email,password){return request('/auth/v1/signup',{method:'POST',body:JSON.stringify({email,password})})},
+ async signUp(email,password){return request('/auth/v1/signup',{method:'POST',body:JSON.stringify({email,password,options:{emailRedirectTo:cfg.siteUrl}})})},
  async signOut(){try{if(session()?.access_token)await request('/auth/v1/logout',{method:'POST'})}finally{saveSession(null)}},
  async currentUser(){if(!session()?.access_token)return null;try{return await request('/auth/v1/user')}catch{saveSession(null);return null}},
  async claims(){return rest('container_claims','?select=id,state,observed_gtin,product_id,jurisdiction_id,created_at&order=created_at.desc')},
