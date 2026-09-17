@@ -1,10 +1,8 @@
 <p align="center">
-  <img src="assets/brand/reclaim-mark.svg" width="180" alt="ReClaim logo" />
+  <img src="assets/brand/reclaim-wordmark.svg" width="720" alt="ReClaim — Real recovery. Lasting impact." />
 </p>
 
-<h1 align="center">ReClaim</h1>
-<p align="center"><strong>Real recovery. Lasting impact.</strong></p>
-<p align="center">Evidence-driven infrastructure for verified material recovery.</p>
+<p align="center"><strong>Evidence-driven infrastructure for verified material recovery.</strong></p>
 
 ---
 
@@ -59,7 +57,7 @@ Evaluation is safety-first. ReClaim measures false clears, discrepancy-detection
 
 The initial field-validation target is a small Morehouse Parish glass recovery pilot with a participating recycler, sponsor, and real residents. The system remains dormant until legitimate participants, physical evidence, and funding exist; synthetic activity is not substituted for field validation.
 
-See [`docs/PILOT.md`](docs/PILOT.md), [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/AI_ARCHITECTURE.md`](docs/AI_ARCHITECTURE.md), and [`docs/SHADOW_EVALUATION.md`](docs/SHADOW_EVALUATION.md).
+See [`docs/PILOT.md`](docs/PILOT.md), [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/AI_ARCHITECTURE.md`](docs/AI_ARCHITECTURE.md), [`docs/SHADOW_EVALUATION.md`](docs/SHADOW_EVALUATION.md), and [`docs/BRAND.md`](docs/BRAND.md).
 
 ## Development
 
