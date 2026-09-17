@@ -5,3 +5,9 @@ verify_jwt = true
 
 [functions.settle-recovery]
 verify_jwt = true
+
+[functions.identify-claim]
+verify_jwt = true
+
+[functions.submit-manifest]
+verify_jwt = true
