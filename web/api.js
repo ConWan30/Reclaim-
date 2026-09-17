@@ -2,12 +2,13 @@ const cfg = window.RECLAIM_CONFIG;
 const SESSION_KEY = 'reclaim.session.v1';
 function session(){try{return JSON.parse(localStorage.getItem(SESSION_KEY)||'null')}catch{return null}}
 function saveSession(v){if(v)localStorage.setItem(SESSION_KEY,JSON.stringify(v));else localStorage.removeItem(SESSION_KEY)}
-async function request(path,options={}){const current=session();const headers=new Headers(options.headers||{});headers.set('apikey',cfg.publishableKey);headers.set('Content-Type','application/json');if(current?.access_token)headers.set('Authorization',`Bearer ${current.access_token}`);const response=await fetch(`${cfg.supabaseUrl}${path}`,{...options,headers});let body=null;try{body=await response.json()}catch{}if(!response.ok){const error=new Error(body?.detail||body?.message||body?.error_description||body?.error||`Request failed (${response.status})`);error.status=response.status;error.body=body;throw error}return body}
+function errorMessage(body,status){const candidate=body?.msg||body?.detail||body?.message||body?.error_description||body?.error?.message||body?.error;if(typeof candidate==='string'&&candidate.trim())return candidate.trim();if(body&&typeof body==='object'){try{const encoded=JSON.stringify(body);if(encoded&&encoded!=='{}')return encoded}catch{}}return `Request failed (${status})`}
+async function request(path,options={}){const current=session();const headers=new Headers(options.headers||{});headers.set('apikey',cfg.publishableKey);headers.set('Content-Type','application/json');if(current?.access_token)headers.set('Authorization',`Bearer ${current.access_token}`);const response=await fetch(`${cfg.supabaseUrl}${path}`,{...options,headers});let body=null;try{body=await response.json()}catch{}if(!response.ok){const error=new Error(errorMessage(body,response.status));error.status=response.status;error.body=body;throw error}return body}
 async function rest(table,query=''){return request(`/rest/v1/${table}${query}`,{headers:{Accept:'application/json'}})}
 window.ReclaimAPI=Object.freeze({
  session,
  async signIn(email,password){const data=await request('/auth/v1/token?grant_type=password',{method:'POST',body:JSON.stringify({email,password})});saveSession(data);return data},
- async signUp(email,password){return request('/auth/v1/signup',{method:'POST',body:JSON.stringify({email,password})})},
+ async signUp(email,password){return request('/auth/v1/signup',{method:'POST',body:JSON.stringify({email,password,options:{emailRedirectTo:cfg.siteUrl}})})},
  async signOut(){try{if(session()?.access_token)await request('/auth/v1/logout',{method:'POST'})}finally{saveSession(null)}},
  async currentUser(){if(!session()?.access_token)return null;try{return await request('/auth/v1/user')}catch{saveSession(null);return null}},
  async claims(){return rest('container_claims','?select=id,state,observed_gtin,product_id,jurisdiction_id,created_at&order=created_at.desc')},
