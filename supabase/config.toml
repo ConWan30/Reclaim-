@@ -1,0 +1,7 @@
+project_id = "omjydexiwyeqjvohqjog"
+
+[functions.verify-recovery]
+verify_jwt = true
+
+[functions.settle-recovery]
+verify_jwt = true
