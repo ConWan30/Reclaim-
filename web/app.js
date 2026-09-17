@@ -1,0 +1,59 @@
+const api = window.ReclaimAPI;
+const $ = (id) => document.getElementById(id);
+const state = { user:null, claims:[], evidence:[], manifests:[], manifestItems:[], recoveries:null, rewards:null };
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const short = (id) => id ? `${id.slice(0,8)}…` : '—';
+const date = (v) => v ? new Intl.DateTimeFormat(undefined,{dateStyle:'medium',timeStyle:'short'}).format(new Date(v)) : '—';
+function banner(message=''){ $('error-banner').hidden=!message; $('error-banner').textContent=message; }
+function statusLabel(claim){
+  const hasRecovery = state.recoveries?.some(r => state.manifestItems.some(i => i.claim_id===claim.id && i.manifest_id===r.manifest_id));
+  const evidence = state.evidence.filter(e=>e.claim_id===claim.id);
+  if(claim.state==='verified') return hasRecovery ? ['Verified Recovery','verified'] : ['Verification Unavailable',''];
+  if(claim.state==='rewarded') return hasRecovery ? ['Rewarded','verified'] : ['Verification Unavailable',''];
+  if(claim.state==='scanned') return ['Scan Captured',''];
+  if(claim.state==='identified') return ['Item Identified',''];
+  if(claim.state==='review_required') return ['Needs Review',''];
+  if(claim.state==='rejected') return ['Not Verified',''];
+  if(claim.state==='expired') return ['Expired',''];
+  if(claim.state==='cancelled') return ['Cancelled',''];
+  return evidence.length ? ['Evidence Available',''] : ['Awaiting Verification',''];
+}
+function metric(label,value,source,unavailable=false){return `<article class="metric ${unavailable?'unavailable':''}"><div class="label">${esc(label)}</div><div class="value">${esc(value)}</div><div class="source">Source: ${esc(source)}</div></article>`}
+function render(){
+  const verifiedAvailable=Array.isArray(state.recoveries);
+  const verifiedCount=verifiedAvailable?state.recoveries.length:null;
+  const evidenceClaims=new Set(state.evidence.map(e=>e.claim_id).filter(Boolean));
+  const awaiting=state.claims.filter(c=>['pending','manifested','submitted'].includes(c.state)).length;
+  $('metrics').innerHTML=[metric('Scans Captured',state.claims.length,'Your claim observations'),metric('Evidence Created',evidenceClaims.size,'Evidence observations'),metric('Awaiting Verification',awaiting,'Claim workflow'),metric('Verified Recoveries',verifiedAvailable?verifiedCount:'Unavailable','Authoritative recovery events',!verifiedAvailable)].join('');
+  const captured=state.claims.length;
+  let verifiedClaimIds=new Set();
+  if(verifiedAvailable) for(const r of state.recoveries) for(const item of state.manifestItems) if(item.manifest_id===r.manifest_id) verifiedClaimIds.add(item.claim_id);
+  const pct=captured&&verifiedAvailable?Math.round(100*state.claims.filter(c=>verifiedClaimIds.has(c.id)).length/captured):null;
+  $('verification-gauge').innerHTML=pct===null?'<div><strong>Unavailable</strong><p class="muted">Requires a capture cohort and authoritative recovery data.</p></div>':`<div><div class="gauge" style="--pct:${pct}" role="img" aria-label="${pct}% of captured claims reached physical verification"><strong>${pct}%</strong></div><p class="muted">Share of captured claims that reached physical verification.</p></div>`;
+  $('claims-table').innerHTML=state.claims.length?state.claims.slice(0,12).map(c=>{const [label,cls]=statusLabel(c);const ec=state.evidence.filter(e=>e.claim_id===c.id).length;return `<tr><td>${esc(short(c.id))}</td><td><span class="status ${cls}">${esc(label)}</span></td><td>${ec}</td><td>${esc(date(c.created_at))}</td></tr>`}).join(''):'<tr><td colspan="4" class="muted">No observations yet. Capture a scan to begin; scanning does not confirm recycling.</td></tr>';
+  $('activity-list').innerHTML=state.claims.slice(0,5).map(c=>{const [label]=statusLabel(c);return `<div class="timeline-item ${c.state==='scanned'?'observation':''}"><span class="dot"></span><div><strong>${esc(label)}</strong><div class="meta">${esc(short(c.id))} · ${esc(date(c.created_at))}</div></div></div>`}).join('')||'<p class="muted">No activity yet.</p>';
+  $('manifest-list').innerHTML=state.manifests.map(m=>`<div class="card"><div class="card-row"><div><strong>Collection ${esc(short(m.id))}</strong><div class="muted">${esc(date(m.created_at))}</div></div><span class="status">${esc(m.status)}</span></div></div>`).join('')||'<p class="muted">No collections yet.</p>';
+  $('evidence-list').innerHTML=state.evidence.map(e=>`<div class="card"><div class="card-row"><div><strong>${esc(e.observation_type)}</strong><div class="muted">${esc(e.source)} · ${esc(date(e.observed_at))}</div></div><span class="status">${e.model_id?'AI assessment':'Observation'}</span></div>${e.model_id?`<p class="muted">Model ${esc(e.model_id)} ${esc(e.model_version||'')} · confidence ${e.confidence==null?'not supplied':Math.round(e.confidence*100)+'%'} · requires physical verification.</p>`:''}</div>`).join('')||'<p class="muted">No evidence observations yet.</p>';
+  $('impact-list').innerHTML=!verifiedAvailable?'<div class="card"><strong>Verified recovery data unavailable</strong><p class="muted">No scan or AI fallback is used.</p></div>':state.recoveries.map(r=>`<div class="card"><strong>Verified recovery ${esc(short(r.id))}</strong><p class="muted">${esc(r.verification_method)} · ${esc(date(r.verified_at))}</p></div>`).join('')||'<div class="card"><strong>No verified recoveries yet</strong><p class="muted">Authoritative recovery source successfully returned zero events.</p></div>';
+  $('reward-list').innerHTML=!Array.isArray(state.rewards)?'<div class="card"><strong>Rewards unavailable</strong></div>':state.rewards.map(r=>`<div class="card"><div class="card-row"><strong>${esc((r.amount_minor_units/100).toFixed(2))} ${esc(r.currency)}</strong><span class="status verified">Settled</span></div><p class="muted">Recovery ${esc(short(r.recovery_event_id))} · ${esc(date(r.created_at))}</p></div>`).join('')||'<p class="muted">No verified rewards yet.</p>';
+}
+async function load(){
+  banner('');
+  const tasks=[['claims',api.claims],['evidence',api.evidence],['manifests',api.manifests],['manifestItems',api.manifestItems],['recoveries',api.recoveryEvents],['rewards',api.rewards]];
+  const results=await Promise.all(tasks.map(async([key,fn])=>{try{return [key,await fn()]}catch(error){return [key,null,error]}}));
+  const errors=[]; for(const [key,value,error] of results){state[key]=value; if(error)errors.push(`${key}: ${error.message}`)}
+  state.claims ||= []; state.evidence ||= []; state.manifests ||= []; state.manifestItems ||= [];
+  if(errors.length) banner(`Some data is unavailable. ${errors.join(' · ')}`);
+  render();
+}
+function route(name){document.querySelectorAll('.page').forEach(p=>p.hidden=p.id!==`${name}-page`);document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.route===name));$('page-title').textContent=({dashboard:'Dashboard',activity:'My Activity',evidence:'Evidence',impact:'Impact',rewards:'Rewards'})[name]||'Dashboard'}
+async function boot(){
+  $('pilot-name').textContent=window.RECLAIM_CONFIG.pilotName;
+  state.user=await api.currentUser();
+  $('auth-view').hidden=!!state.user; $('app').hidden=!state.user;
+  if(state.user){$('user-email').textContent=state.user.email||'Participant';await load()}
+}
+$('auth-form').addEventListener('submit',async e=>{e.preventDefault();$('auth-message').textContent='Signing in…';try{await api.signIn($('email').value,$('password').value);$('auth-message').textContent='';await boot()}catch(err){$('auth-message').textContent=err.message}});
+$('signup').addEventListener('click',async()=>{try{await api.signUp($('email').value,$('password').value);$('auth-message').textContent='Account request created. Check your email if confirmation is required.'}catch(err){$('auth-message').textContent=err.message}});
+$('signout').addEventListener('click',async()=>{await api.signOut();location.reload()});$('refresh').addEventListener('click',load);$('new-scan').addEventListener('click',async()=>{try{await api.createScan();await load()}catch(e){banner(e.message)}});$('new-manifest').addEventListener('click',async()=>{try{await api.createManifest();await load();route('activity')}catch(e){banner(e.message)}});document.querySelectorAll('.nav').forEach(n=>n.addEventListener('click',()=>route(n.dataset.route)));
+boot();
