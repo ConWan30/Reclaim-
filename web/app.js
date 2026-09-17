@@ -1,7 +1,7 @@
 const api = window.ReclaimAPI;
 const $ = (id) => document.getElementById(id);
 const state = { user:null, claims:[], evidence:[], manifests:[], manifestItems:[], recoveries:null, rewards:null };
-const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const short = (id) => id ? `${id.slice(0,8)}…` : '—';
 const date = (v) => v ? new Intl.DateTimeFormat(undefined,{dateStyle:'medium',timeStyle:'short'}).format(new Date(v)) : '—';
 function banner(message=''){ $('error-banner').hidden=!message; $('error-banner').textContent=message; }
