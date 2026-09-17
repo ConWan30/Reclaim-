@@ -1,0 +1,3 @@
+alter table public.container_claims add column if not exists observed_gtin text;
+alter table public.container_claims add constraint container_claims_observed_gtin_format check(observed_gtin is null or observed_gtin ~ '^[0-9]{8,14}$');
+comment on column public.container_claims.observed_gtin is 'Barcode observed at scan time. Observation only; does not establish product identity, eligibility, recovery, or reward.';
