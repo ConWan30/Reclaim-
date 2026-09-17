@@ -11,3 +11,6 @@ verify_jwt = true
 
 [functions.submit-manifest]
 verify_jwt = true
+
+[functions.shadow-reconcile]
+verify_jwt = true
